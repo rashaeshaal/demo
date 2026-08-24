@@ -269,6 +269,14 @@ th {
   font-size: 13px;
 }
 
+.pc-item.offline {
+  color: var(--muted);
+}
+
+.pc-item.offline .pc-name span:last-child {
+  color: var(--danger);
+}
+
 .empty,
 .empty-block {
   color: var(--muted);

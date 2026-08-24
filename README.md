@@ -219,6 +219,18 @@ The dashboard will call:
 https://your-cloud-server.com/messages
 ```
 
+## Online and Offline PCs
+
+The frontend counts a PC as connected only when its latest MQTT message was received in the last 10 seconds.
+
+If a PC stops publishing, it stays in the PC summary but changes to:
+
+```text
+offline
+```
+
+The connected PC count will go down automatically.
+
 ## Backend CORS
 
 The Python backend allows browser requests. For local demo it uses:

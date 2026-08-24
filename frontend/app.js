@@ -7,6 +7,7 @@ const connectedPcs = document.querySelector("#connectedPcs");
 const lastUpdate = document.querySelector("#lastUpdate");
 const messagesBody = document.querySelector("#messagesBody");
 const pcSummary = document.querySelector("#pcSummary");
+const ONLINE_TIMEOUT_MS = 10000;
 
 const savedBackendUrl = localStorage.getItem("backendUrl");
 if (savedBackendUrl) {
@@ -25,6 +26,10 @@ function setStatus(type, text) {
 function formatTime(value) {
   if (!value) return "-";
   return new Date(value).toLocaleTimeString();
+}
+
+function isOnline(message) {
+  return Date.now() - new Date(message.receivedAt).getTime() <= ONLINE_TIMEOUT_MS;
 }
 
 function renderMessages(messages) {
@@ -62,22 +67,37 @@ function renderPcSummary(messages) {
     byPc.set(message.pcId, message);
   }
 
-  connectedPcs.textContent = byPc.size;
+  const pcMessages = Array.from(byPc.values());
+  const onlineCount = pcMessages.filter(isOnline).length;
+  connectedPcs.textContent = onlineCount;
 
   if (byPc.size === 0) {
     pcSummary.innerHTML = '<div class="empty-block">No PC data yet.</div>';
     return;
   }
 
-  pcSummary.innerHTML = Array.from(byPc.values())
-    .sort((a, b) => a.pcId.localeCompare(b.pcId))
+  pcSummary.innerHTML = pcMessages
+    .sort((a, b) => {
+      const aOnline = isOnline(a);
+      const bOnline = isOnline(b);
+
+      if (aOnline !== bOnline) {
+        return aOnline ? -1 : 1;
+      }
+
+      return a.pcId.localeCompare(b.pcId);
+    })
     .map((message) => {
       const payload = message.payload || {};
+      const online = isOnline(message);
+      const itemClass = online ? "pc-item" : "pc-item offline";
+      const stateLabel = online ? payload.status || "online" : "offline";
+
       return `
-        <div class="pc-item">
+        <div class="${itemClass}">
           <div class="pc-name">
             <span>${message.pcId}</span>
-            <span>${payload.status || "-"}</span>
+            <span>${stateLabel}</span>
           </div>
           <div class="pc-meta">
             Last message #${message.sequence} at ${formatTime(message.receivedAt)}
