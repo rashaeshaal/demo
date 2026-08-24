@@ -1,14 +1,14 @@
- Multiple Local Backends, Python Backend, Vercel Frontend Demo
+# MQTT Architecture Demo: Local PCs, Broker, Python Backend, Vercel Frontend
 
 This demo shows the common production pattern:
 
 ```text
 Local PC backend 1 --\
-Local PC backend 2 ----> Python backend ----> Vercel frontend reads data
+Local PC backend 2 ----> MQTT broker ----> Python subscriber backend ----> Vercel frontend
 Local PC backend 3 --/
 ```
 
-The local PCs send data to a Python backend. The frontend is a static dashboard that can be hosted on Vercel.
+The local PCs publish MQTT messages. The Python backend subscribes to the MQTT broker and exposes `/messages` for the frontend. The frontend is a static dashboard that can be hosted on Vercel.
 
 Important: a Vercel frontend cannot access `localhost` on your computer. For Vercel to read your Python backend, the Python backend must have a public URL.
 
@@ -28,50 +28,83 @@ You can get a public backend URL by deploying the Python backend to a cloud serv
 
 ## Files
 
-- `cloud_server.py`: the cloud-hosted backend receiver.
-- `local_pc_client.py`: one local PC backend simulator.
+- `cloud_server.py`: MQTT subscriber backend plus HTTP API for the frontend.
+- `local_pc_client.py`: one local PC MQTT publisher simulator.
+- `requirements.txt`: Python dependency list.
 - `frontend/`: Vercel-ready dashboard frontend.
 
-## Run the Cloud Backend
+## Install Python Dependency
+
+This demo uses the MQTT client library `paho-mqtt`.
+
+```powershell
+py -m pip install -r requirements.txt
+```
+
+If your Python command is `python`, use:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+## Run the MQTT Subscriber Backend
 
 Open one PowerShell terminal:
 
 ```powershell
-python .\cloud_server.py
+py .\cloud_server.py
 ```
 
 You should see:
 
 ```text
 [cloud] listening on http://localhost:3000
+[mqtt] connected to broker.hivemq.com:1883
+[mqtt] subscribed to rasha/demo/+/data
 ```
 
-## Run 3 Local PC Backends
+By default this demo uses the public HiveMQ test broker:
+
+```text
+broker.hivemq.com:1883
+```
+
+For production, use your own broker such as Mosquitto, EMQX, HiveMQ Cloud, or AWS IoT Core.
+
+## Run 3 Local PC MQTT Publishers
 
 Open three more PowerShell terminals.
 
 Terminal 1:
 
 ```powershell
-$env:PC_ID="pc-1"; python .\local_pc_client.py
+$env:PC_ID="pc-1"; py .\local_pc_client.py
 ```
 
 Terminal 2:
 
 ```powershell
-$env:PC_ID="pc-2"; python .\local_pc_client.py
+$env:PC_ID="pc-2"; py .\local_pc_client.py
 ```
 
 Terminal 3:
 
 ```powershell
-$env:PC_ID="pc-3"; python .\local_pc_client.py
+$env:PC_ID="pc-3"; py .\local_pc_client.py
 ```
 
-Each local backend sends data every 2 seconds to:
+Each local backend publishes every 2 seconds to MQTT topics:
 
 ```text
-http://localhost:3000/data
+rasha/demo/pc-1/data
+rasha/demo/pc-2/data
+rasha/demo/pc-3/data
+```
+
+The Python backend subscribes to:
+
+```text
+rasha/demo/+/data
 ```
 
 ## Open the Frontend Locally
@@ -106,25 +139,37 @@ Invoke-RestMethod http://localhost:3000/messages
 
 ## How This Maps to Real Deployment
 
-For local PC clients in testing:
+For local PC MQTT publishers in testing:
 
 ```text
-CLOUD_URL=http://localhost:3000/data
+MQTT_HOST=broker.hivemq.com
+MQTT_PORT=1883
+MQTT_TOPIC_PREFIX=rasha/demo
 ```
 
-For local PC clients in production:
+For local PC MQTT publishers in production:
 
 ```text
-CLOUD_URL=https://your-cloud-server.com/data
+MQTT_HOST=your-mqtt-broker.com
+MQTT_PORT=1883
+MQTT_TOPIC_PREFIX=factory/live
 ```
 
 Then each local PC runs:
 
 ```powershell
 $env:PC_ID="pc-1"
-$env:CLOUD_URL="https://your-cloud-server.com/data"
-$env:API_KEY="your-real-secret"
-python .\local_pc_client.py
+$env:MQTT_HOST="your-mqtt-broker.com"
+$env:MQTT_TOPIC_PREFIX="factory/live"
+py .\local_pc_client.py
+```
+
+On your cloud Python backend, subscribe to the same topic prefix:
+
+```powershell
+$env:MQTT_HOST="your-mqtt-broker.com"
+$env:MQTT_TOPIC="factory/live/+/data"
+py .\cloud_server.py
 ```
 
 For the Vercel frontend:
@@ -157,16 +202,16 @@ For production, set it to your Vercel domain:
 
 ```powershell
 $env:ALLOWED_ORIGIN="https://your-project.vercel.app"
-python .\cloud_server.py
+py .\cloud_server.py
 ```
 
 ## Why This Works
 
-- Local PCs only make outbound internet requests.
+- Local PCs only make outbound MQTT connections.
 - No router port forwarding is needed.
-- The Python backend receives all data in one place.
+- The MQTT broker receives live messages from all local PCs.
+- The Python backend subscribes to MQTT and stores the latest data in one place.
 - The Vercel frontend only displays data from the Python backend.
 - `pcId` tells the cloud which PC sent the data.
-- `x-api-key` is a simple demo authentication method.
 
-For real production, use HTTPS, stronger authentication, retries, and a database instead of in-memory storage.
+For real production, use TLS MQTT, broker username/password or certificates, retries, and a database instead of in-memory storage.

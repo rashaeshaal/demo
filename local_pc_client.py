@@ -4,13 +4,16 @@ import random
 import socket
 import time
 from datetime import datetime, timezone
-from urllib import request
-from urllib.error import URLError, HTTPError
+
+import paho.mqtt.client as mqtt
 
 
 PC_ID = os.environ.get("PC_ID") or "pc-1"
-CLOUD_URL = os.environ.get("CLOUD_URL") or "http://localhost:3000/data"
-API_KEY = os.environ.get("API_KEY") or "demo-secret"
+MQTT_HOST = os.environ.get("MQTT_HOST", "broker.hivemq.com")
+MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
+MQTT_TOPIC_PREFIX = os.environ.get("MQTT_TOPIC_PREFIX", "rasha/demo")
+MQTT_USERNAME = os.environ.get("MQTT_USERNAME")
+MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD")
 INTERVAL_SECONDS = float(os.environ.get("INTERVAL_SECONDS") or "2")
 
 sequence = 0
@@ -41,45 +44,24 @@ def build_message():
     }
 
 
-def send_message(message):
-    body = json.dumps(message).encode("utf-8")
-    http_request = request.Request(
-        CLOUD_URL,
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Content-Length": str(len(body)),
-            "x-api-key": API_KEY,
-        },
-    )
-
-    with request.urlopen(http_request, timeout=10) as response:
-        return response.status, response.read().decode("utf-8")
-
-
 def main():
-    print(f"[{PC_ID}] sending data to {CLOUD_URL}", flush=True)
+    topic = f"{MQTT_TOPIC_PREFIX}/{PC_ID}/data"
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
+    if MQTT_USERNAME and MQTT_PASSWORD:
+        client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+
+    print(f"[{PC_ID}] connecting to MQTT broker {MQTT_HOST}:{MQTT_PORT}", flush=True)
+    client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
+    client.loop_start()
+    print(f"[{PC_ID}] publishing data to topic {topic}", flush=True)
 
     while True:
         message = build_message()
+        result = client.publish(topic, json.dumps(message), qos=1)
+        result.wait_for_publish()
 
-        try:
-            status_code, _ = send_message(message)
-            print(
-                f"[{PC_ID}] sent #{message['sequence']} -> cloud responded {status_code}",
-                flush=True,
-            )
-        except HTTPError as error:
-            print(
-                f"[{PC_ID}] cloud rejected #{message['sequence']}: {error.code}",
-                flush=True,
-            )
-        except URLError as error:
-            print(
-                f"[{PC_ID}] send failed #{message['sequence']}: {error.reason}",
-                flush=True,
-            )
+        print(f"[{PC_ID}] published #{message['sequence']} to MQTT", flush=True)
 
         time.sleep(INTERVAL_SECONDS)
 
