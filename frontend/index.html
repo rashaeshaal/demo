@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Backend Data Monitor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Vercel frontend</p>
+          <h1>Backend Data Monitor</h1>
+        </div>
+        <div class="status" id="connectionStatus">
+          <span class="status-dot"></span>
+          <span>Connecting</span>
+        </div>
+      </section>
+
+      <section class="controls">
+        <label for="backendUrl">Backend URL</label>
+        <div class="url-row">
+          <input id="backendUrl" type="url" value="http://localhost:3000" />
+          <button id="saveBackendUrl">Save</button>
+          <button id="refreshNow">Refresh</button>
+        </div>
+      </section>
+
+      <section class="metrics">
+        <div class="metric">
+          <span>Total Messages</span>
+          <strong id="totalMessages">0</strong>
+        </div>
+        <div class="metric">
+          <span>Connected PCs</span>
+          <strong id="connectedPcs">0</strong>
+        </div>
+        <div class="metric">
+          <span>Last Update</span>
+          <strong id="lastUpdate">-</strong>
+        </div>
+      </section>
+
+      <section class="layout">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Latest Data</h2>
+            <span id="autoRefresh">Auto refresh: 2s</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>PC</th>
+                  <th>Status</th>
+                  <th>Temp</th>
+                  <th>Pressure</th>
+                  <th>Received</th>
+                </tr>
+              </thead>
+              <tbody id="messagesBody">
+                <tr>
+                  <td colspan="6" class="empty">Waiting for data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>PC Summary</h2>
+          </div>
+          <div id="pcSummary" class="pc-list">
+            <div class="empty-block">No PC data yet.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
