@@ -30,6 +30,7 @@ You can get a public backend URL by deploying the Python backend to a cloud serv
 
 - `cloud_server.py`: MQTT subscriber backend plus HTTP API for the frontend.
 - `local_pc_client.py`: one local PC MQTT publisher simulator.
+- `publish_dummy_data.py`: sends one batch of dummy MQTT data for `pc-1`, `pc-2`, and `pc-3`.
 - `requirements.txt`: Python dependency list.
 - `frontend/`: Vercel-ready dashboard frontend.
 
@@ -105,6 +106,34 @@ The Python backend subscribes to:
 
 ```text
 rasha/demo/+/data
+```
+
+## Send One Batch of Dummy Data
+
+If you only want to test data passing once, run the backend first:
+
+```powershell
+py .\cloud_server.py
+```
+
+Then open another PowerShell terminal and run:
+
+```powershell
+py .\publish_dummy_data.py
+```
+
+This sends three dummy MQTT messages:
+
+```text
+pc-1 -> rasha/demo/pc-1/data
+pc-2 -> rasha/demo/pc-2/data
+pc-3 -> rasha/demo/pc-3/data
+```
+
+Then open:
+
+```text
+http://localhost:3000/messages
 ```
 
 ## Open the Frontend Locally
