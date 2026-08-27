@@ -1,4 +1,4 @@
-MQTT Architecture Demo: Local PCs, Broker, Python Backend, Vercel Frontend
+::MQTT Architecture Demo: Local PCs, Broker, Python Backend, Vercel Frontend
 
 This demo shows the common production pattern:
 
